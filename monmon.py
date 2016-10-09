@@ -8,7 +8,8 @@ sets schedule once number of shifts are sent
 import pandas as pd
 import numpy as np
 
-fname = "monthcount\September 2016.xlsx"
+#change FNAME everytime when running this code
+fname = "monthcount\August 2016.xlsx"
 
 #randomlist located in an excel file:
 randomlist = pd.read_excel('randomlist.xlsx')
@@ -29,17 +30,15 @@ save an edited excel file in folder .\montcount\
 monthcount = pd.read_excel(fname)
 monthnum = monthcount.index.values
 
-#clean stuff: filled values, upparcase all, fill event indicator,remove non-events
+#clean stuff: filled values, upparcase all, fill event indicator, do not remove non-events
 monthcount['DATE'].fillna(method = 'pad',inplace = True)
 monthcount['TECH'].fillna("NONE",inplace = True)
 monthcount['COMM'].fillna("NONE",inplace = True)
 monthcount['EVENT'].fillna(0, inplace = True)
 monthcount['TECH'] = monthcount['TECH'].str.upper()
 monthcount['COMM'] = monthcount['COMM'].str.upper()
-monthcount = monthcount[monthcount['EVENT'] == 1]
+#print monthcount
 
-#update allshiftcount
-temp = pd.DataFrame(columns = ['DATE','SHIFT','TECH','COMM','EVENT'])
 
 #count number of shifts per person, will update moncount.xlsx
 for staffcnt in np.arange(len(randomlist.index)):
@@ -50,7 +49,7 @@ for staffcnt in np.arange(len(randomlist.index)):
 		temp2 = [{
 			'DATE' : tempTECH['DATE'].values[techcnt],
 			'NAME' : randomlist['STAFF'].values[staffcnt],
-			'TECH' : 1,
+			'TECH' : tempTECH['EVENT'].values[techcnt],
 			'COMM' : 0
 		}]
 		temp2df = pd.DataFrame(temp2,columns = shiftcountpara)
@@ -64,7 +63,7 @@ for staffcnt in np.arange(len(randomlist.index)):
 			'DATE' : tempCOMM['DATE'].values[commcnt],
 			'NAME' : randomlist['STAFF'].values[staffcnt],
 			'TECH' : 0,
-			'COMM' : 1
+			'COMM' : tempCOMM['EVENT'].values[commcnt]
 		}]
 		temp2df = pd.DataFrame(temp2,columns = shiftcountpara)
 		allshiftcount = allshiftcount.append(temp2df, ignore_index = True)
@@ -88,22 +87,33 @@ ASSIGNING methodology
 	-then randomly assign MT and CT shifts to all staff, evenly distributed
 	-then adjust for previous iterations
 """
-
-staffshift = pd.DataFrame(columns = ['STAFF','COMM','TECH','TOTAL'])
-temp3df = pd.DataFrame(columns = ['STAFF','COMM','TECH','TOTAL'])
+finalpara = ['STAFF','COMM','COMMALL','%COMM','TECH','TECHALL','%TECH','TOTAL','TOTALALL','%TOTAL']
+staffshift = pd.DataFrame(columns = finalpara)
+temp3df = pd.DataFrame(columns = finalpara)
 allshiftcount = temp2df
 
 #count number of total shifts per staff (since epoch)
 for staffcnt in np.arange(len(randomlist.index)):
 	tempCOUNT = allshiftcount[allshiftcount['NAME']==randomlist['STAFF'].values[staffcnt]]
 	tempCOUNT.reset_index(drop=True,inplace=True)
+	print tempCOUNT
+	sumCOMM = tempCOUNT['COMM'].sum()
+	allCOMM = tempCOUNT['COMM'].count()
+	sumTECH = tempCOUNT['TECH'].sum()
+	allTECH = tempCOUNT['TECH'].count()
 	temp3 = [{
 		'STAFF' : randomlist['STAFF'].values[staffcnt],
-		'COMM' : tempCOUNT['COMM'].sum(),
-		'TECH' : tempCOUNT['TECH'].sum(),
-		'TOTAL' : tempCOUNT['TECH'].sum()+tempCOUNT['COMM'].sum()
+		'COMM' : sumCOMM,
+		'COMMALL' : allCOMM,
+		'%COMM' : 100*sumCOMM/allCOMM,
+		'TECH' : sumTECH,
+		'TECHALL' : allTECH,
+		'%TECH' : 100*sumTECH/allTECH,
+		'TOTAL' : sumTECH+sumCOMM, 
+		'TOTALALL' : allCOMM, #dont add both totals kasi dodoble
+		'%TOTAL': 100*(sumTECH+sumCOMM)/(allCOMM)
 	}]
-	temp3df = pd.DataFrame(temp3, columns =['STAFF','COMM','TECH','TOTAL'])
+	temp3df = pd.DataFrame(temp3, columns =finalpara)
 	staffshift = staffshift.append(temp3df,ignore_index = True)
 
 print staffshift
