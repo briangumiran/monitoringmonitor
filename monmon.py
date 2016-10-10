@@ -9,14 +9,14 @@ import pandas as pd
 import numpy as np
 
 #change FNAME everytime when running this code
-fname = "monthcount\August 2016.xlsx"
+fname = "monthcount\June 2016.xlsx"
 
 #randomlist located in an excel file:
 randomlist = pd.read_excel('randomlist.xlsx')
 
 #update shift count
 allshiftcount = pd.read_excel('moncount.xlsx')
-shiftcountpara = ['DATE','NAME','TECH','COMM']
+shiftcountpara = ['DATE','NAME','COMM','EVENTC','TECH','EVENTT']
 """
 part 1:
 
@@ -49,8 +49,10 @@ for staffcnt in np.arange(len(randomlist.index)):
 		temp2 = [{
 			'DATE' : tempTECH['DATE'].values[techcnt],
 			'NAME' : randomlist['STAFF'].values[staffcnt],
-			'TECH' : tempTECH['EVENT'].values[techcnt],
-			'COMM' : 0
+			'TECH' : 1,
+			'COMM' : 0,
+			'EVENTT': tempTECH['EVENT'].values[techcnt],
+			'EVENTC': 0
 		}]
 		temp2df = pd.DataFrame(temp2,columns = shiftcountpara)
 		allshiftcount = allshiftcount.append(temp2df, ignore_index = True)
@@ -63,7 +65,9 @@ for staffcnt in np.arange(len(randomlist.index)):
 			'DATE' : tempCOMM['DATE'].values[commcnt],
 			'NAME' : randomlist['STAFF'].values[staffcnt],
 			'TECH' : 0,
-			'COMM' : tempCOMM['EVENT'].values[commcnt]
+			'COMM' : 1,
+			'EVENTT': 0,
+			'EVENTC': tempCOMM['EVENT'].values[commcnt]
 		}]
 		temp2df = pd.DataFrame(temp2,columns = shiftcountpara)
 		allshiftcount = allshiftcount.append(temp2df, ignore_index = True)
@@ -87,7 +91,7 @@ ASSIGNING methodology
 	-then randomly assign MT and CT shifts to all staff, evenly distributed
 	-then adjust for previous iterations
 """
-finalpara = ['STAFF','COMM','COMMALL','%COMM','TECH','TECHALL','%TECH','TOTAL','TOTALALL','%TOTAL']
+finalpara = ['STAFF','COMM','COMMALL','%COMM','TECH','TECHALL','%TECH','TOTAL','ALL','%ALL']
 staffshift = pd.DataFrame(columns = finalpara)
 temp3df = pd.DataFrame(columns = finalpara)
 allshiftcount = temp2df
@@ -96,22 +100,40 @@ allshiftcount = temp2df
 for staffcnt in np.arange(len(randomlist.index)):
 	tempCOUNT = allshiftcount[allshiftcount['NAME']==randomlist['STAFF'].values[staffcnt]]
 	tempCOUNT.reset_index(drop=True,inplace=True)
-	print tempCOUNT
-	sumCOMM = tempCOUNT['COMM'].sum()
-	allCOMM = tempCOUNT['COMM'].count()
-	sumTECH = tempCOUNT['TECH'].sum()
-	allTECH = tempCOUNT['TECH'].count()
+	#print tempCOUNT
+	
+	sumCOMM = tempCOUNT['EVENTC'].sum()
+	allCOMM = tempCOUNT['COMM'].sum()
+	sumTECH = tempCOUNT['EVENTT'].sum()
+	allTECH = tempCOUNT['TECH'].sum()
+	total = sumTECH+sumCOMM
+	all = allCOMM+allTECH
+	try:
+		RATCOMM = 100*sumCOMM/allCOMM
+	except ZeroDivisionError:
+		RATCOMM = 0
+
+	try:
+		RATTECH	= 100*sumTECH/allTECH
+	except ZeroDivisionError:
+		RATTECH = 0
+		
+	try:
+		RATALL	= 100*total/all
+	except ZeroDivisionError:
+		RATALL = 0
+
 	temp3 = [{
 		'STAFF' : randomlist['STAFF'].values[staffcnt],
 		'COMM' : sumCOMM,
 		'COMMALL' : allCOMM,
-		'%COMM' : 100*sumCOMM/allCOMM,
+		'%COMM' : RATCOMM,
 		'TECH' : sumTECH,
 		'TECHALL' : allTECH,
-		'%TECH' : 100*sumTECH/allTECH,
-		'TOTAL' : sumTECH+sumCOMM, 
-		'TOTALALL' : allCOMM, #dont add both totals kasi dodoble
-		'%TOTAL': 100*(sumTECH+sumCOMM)/(allCOMM)
+		'%TECH' : RATTECH,
+		'TOTAL' : total, 
+		'ALL' : all, 
+		'%ALL': RATALL
 	}]
 	temp3df = pd.DataFrame(temp3, columns =finalpara)
 	staffshift = staffshift.append(temp3df,ignore_index = True)
